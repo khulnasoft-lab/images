@@ -2,9 +2,6 @@ name: Docker CI/CD Pipeline
 
 on:
   workflow_dispatch:
-    branches:
-      - main
-      - master
 
 env:
   DOCKER_BUILDKIT: 1
