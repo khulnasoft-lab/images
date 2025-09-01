@@ -1,4 +1,4 @@
-name: Build & Deploy
+name: Docker CI/CD Pipeline
 
 on:
   pull_request:
@@ -8,11 +8,15 @@ on:
       - master
   workflow_dispatch:
 
+env:
+  DOCKER_BUILDKIT: 1
+
 jobs:
   # -------------------------------------------------------------
-  # Build jobs
+  # Build jobs (for PR validation)
   # -------------------------------------------------------------
   build-node-codesign:
+    name: Build (PR) - node-codesign
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     env:
@@ -25,7 +29,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build node-codesign
+      - name: Build node-codesign (PR)
         run: |
           docker pull ghcr.io/${{ github.repository }}/node-codesign:${NODE_IMAGE_VERSION} || true
           docker build -f ./node-codesign/Dockerfile \
@@ -34,6 +38,7 @@ jobs:
             --tag ghcr.io/${{ github.repository }}/node-codesign:${NODE_IMAGE_VERSION} ./node-codesign
 
   build-mono-nuget:
+    name: Build (PR) - mono-nuget
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
@@ -44,12 +49,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build mono-nuget
+      - name: Build mono-nuget (PR)
         run: |
           docker build -f ./mono-nuget/Dockerfile \
             --tag ghcr.io/${{ github.repository }}/mono-nuget ./mono-nuget
 
   build-net-framework-vs-workload:
+    name: Build (PR) - net-framework-vs-workload
     runs-on: windows-latest
     if: github.event_name == 'pull_request'
     continue-on-error: true
@@ -61,7 +67,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build net-framework-vs-workload
+      - name: Build net-framework-vs-workload (PR)
         run: |
           docker pull ghcr.io/${{ github.repository }}/net-framework-vs-workload || echo "no cache"
           docker build -f ./net-framework-vs-workload/Dockerfile `
@@ -72,6 +78,7 @@ jobs:
   # Deploy jobs (only on default branch)
   # -------------------------------------------------------------
   deploy-node-codesign:
+    name: Deploy node-codesign
     needs: build-node-codesign
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -86,7 +93,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build & Push node-codesign ${{ matrix.node_version }}
+      - name: Build & Push node-codesign (${{ matrix.node_version }})
         run: |
           docker pull ghcr.io/${{ github.repository }}/node-codesign:${{ matrix.node_version }} || true
           docker build -f ./node-codesign/Dockerfile \
@@ -96,6 +103,7 @@ jobs:
           docker push ghcr.io/${{ github.repository }}/node-codesign:${{ matrix.node_version }}
 
   deploy-mono-nuget:
+    name: Deploy mono-nuget
     needs: build-mono-nuget
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -113,6 +121,7 @@ jobs:
           docker push ghcr.io/${{ github.repository }}/mono-nuget
 
   deploy-net-framework-vs-workload:
+    name: Deploy net-framework-vs-workload
     needs: build-net-framework-vs-workload
     runs-on: windows-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
