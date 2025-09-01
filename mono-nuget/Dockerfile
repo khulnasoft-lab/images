@@ -1,4 +1,4 @@
-ARG DEBIAN_RELEASE=bookworm
+ARG DEBIAN_RELEASE=trixie
 FROM debian:${DEBIAN_RELEASE}
 
 # Install dependencies, add Mono repository, and install Mono and NuGet
